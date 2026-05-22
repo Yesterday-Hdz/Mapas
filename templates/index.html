@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Búsqueda A* - Rutas por Carretera</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: flex;
+            gap: 20px;
+            padding: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .sidebar {
+            flex: 0 0 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+        }
+        
+        .sidebar h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .map-container {
+            flex: 1;
+            min-width: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+        
+        .results {
+            width: 100%;
+            margin-top: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .results h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .route-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .route-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+        
+        .route-info strong {
+            color: #333;
+        }
+        
+        .ruta-list {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            list-style: none;
+        }
+        
+        .ruta-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            color: #555;
+        }
+        
+        .ruta-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .ruta-list li strong {
+            color: #667eea;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #c33;
+            margin-top: 10px;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3c3;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                flex: 1;
+            }
+            
+            .map-container {
+                min-width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            color: #1565c0;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Búsqueda A* - Rutas por Carretera</h1>
+            <p>Encuentra la mejor ruta entre ciudades mexicanas</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <h2>Planificador de Rutas</h2>
+                
+                <div class="info-box">
+                    <p><strong>ℹ️ Algoritmo A*</strong></p>
+                    <p>Búsqueda informada que calcula la distancia geodésica entre ciudades.</p>
+                </div>
+                
+                <form id="routeForm">
+                    <div class="form-group">
+                        <label for="inicio">Ciudad de Inicio:</label>
+                        <select id="inicio" required>
+                            <option value="">-- Selecciona una ciudad --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fin">Ciudad de Destino:</label>
+                        <select id="fin" required>
+                            <option value="">-- Selecciona una ciudad --</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn">🔍 Buscar Ruta</button>
+                </form>
+                
+                <div id="resultados"></div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+        
+        <div class="results" id="resultsContainer" style="display: none;">
+            <h2>📍 Resultado de la Búsqueda</h2>
+            <div id="resultDetails"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializar mapa
+        const map = L.map('map').setView([23, -102], 4);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Marcadores de ciudades
+        const ciudadMarkers = {};
+        const coordenadas = JSON.parse(document.currentScript.dataset.coord || '{}');
+        
+        // Obtener coordenadas del HTML
+        const cities = document.querySelectorAll('select option');
+        const allCities = [];
+        
+        // Llenar selects
+        fetch('/').then(response => response.text()).then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            // Esta es una forma alternativa, usaremos JavaScript inline
+        });
+        
+        // Datos de ciudades y coordenadas
+        const cityData = {
+            'Jiloyork': [19.952408902750292, -99.53304570197712],
+            'CDMX': [19.432684900517486, -99.13333701698],
+            'QRO': [20.587956563302367, -100.38793290667115],
+            'MORELOS': [18.930555912984644, -99.22237799899486],
+            'HGO': [20.127000042049925, -98.73156416258126],
+            'AGS': [21.856150731885958, -102.28915655184271],
+            'SLP': [22.151749211629454, -100.97643458591887],
+            'SONORA': [29.07865856228773, -110.94760761628041],
+            'MEXICALI': [29.07865856228773, -110.94760761628041],
+            'MTY': [25.66616067388393, -100.32880810205152]
+        };
+        
+        // Llenar los selects
+        function populateSelects() {
+            const inicioSelect = document.getElementById('inicio');
+            const finSelect = document.getElementById('fin');
+            
+            for (const ciudad in cityData) {
+                const option1 = document.createElement('option');
+                option1.value = ciudad;
+                option1.textContent = ciudad;
+                inicioSelect.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = ciudad;
+                option2.textContent = ciudad;
+                finSelect.appendChild(option2);
+                
+                // Agregar marcador al mapa
+                const [lat, lon] = cityData[ciudad];
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 8,
+                    fillColor: '#667eea',
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map).bindPopup(`<strong>${ciudad}</strong>`);
+                
+                ciudadMarkers[ciudad] = marker;
+            }
+        }
+        
+        populateSelects();
+        
+        // Variable para la polyline de la ruta
+        let currentPolyline = null;
+        
+        // Manejar el formulario
+        document.getElementById('routeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const inicio = document.getElementById('inicio').value;
+            const fin = document.getElementById('fin').value;
+            
+            if (!inicio || !fin) {
+                alert('Selecciona una ciudad de inicio y destino');
+                return;
+            }
+            
+            if (inicio === fin) {
+                alert('La ciudad de inicio y destino deben ser diferentes');
+                return;
+            }
+            
+            const resultados = document.getElementById('resultados');
+            resultados.innerHTML = '<div class="loading">⏳ Buscando ruta...</div>';
+            
+            try {
+                const response = await fetch('/buscar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inicio: inicio,
+                        fin: fin
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarResultados(data, inicio, fin);
+                } else {
+                    resultados.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultados.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        });
+        
+        function mostrarResultados(data, inicio, fin) {
+            const resultados = document.getElementById('resultados');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultDetails = document.getElementById('resultDetails');
+            
+            // Remover polyline anterior
+            if (currentPolyline) {
+                map.removeLayer(currentPolyline);
+            }
+            
+            // Dibujar la ruta en el mapa
+            const coordinates = data.coordenadas.map(coord => [coord[0], coord[1]]);
+            currentPolyline = L.polyline(coordinates, {
+                color: '#667eea',
+                weight: 4,
+                opacity: 0.8,
+                className: 'route-line'
+            }).addTo(map);
+            
+            // Centrar mapa en la ruta
+            map.fitBounds(currentPolyline.getBounds().pad(0.1));
+            
+            // Mostrar información de la ruta
+            let ruteHTML = '<div class="route-info">';
+            ruteHTML += `<p><strong>Ruta encontrada:</strong></p>`;
+            ruteHTML += `<p>De: <strong>${inicio}</strong> → A: <strong>${fin}</strong></p>`;
+            ruteHTML += `<p>Distancia total: <strong>${data.costo} km</strong></p>`;
+            ruteHTML += '</div>';
+            
+            ruteHTML += '<div class="ruta-list"><p style="font-weight: bold; margin-bottom: 10px;">Camino a seguir:</p>';
+            data.ruta.forEach((ciudad, index) => {
+                ruteHTML += `<li>${index + 1}. <strong>${ciudad}</strong></li>`;
+            });
+            ruteHTML += '</div>';
+            
+            resultados.innerHTML = ruteHTML;
+            
+            // Mostrar en el contenedor de resultados
+            resultDetails.innerHTML = `
+                <div class="route-info">
+                    <p><strong>✅ Ruta encontrada exitosamente</strong></p>
+                    <p>Nodos visitados en el camino: ${data.ruta.length}</p>
+                    <p>Costo total (distancia): ${data.costo} km</p>
+                </div>
+            `;
+            resultsContainer.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
