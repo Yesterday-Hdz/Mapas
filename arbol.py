@@ -1,15 +1,19 @@
-class nodo:
+class Nodo:
     def __init__(self, datos, hijos=None):
         self.datos = datos
-        self.hijos = None
+        self.hijos = []
         self.padre = None
-        self.costo = None
-        self.set_hijos(hijos)
+        self.costo = 0
+        if hijos:
+            self.set_hijos(hijos)
 
     def set_hijos(self, hijos):
-        self.hijos = hijos
-        if self.hijos != None:
-            for h in self.hijos:
+        self.hijos = hijos or []
+        for h in self.hijos:
+            # Asegurar que el hijo tiene el atributo set_padre
+            try:
+                h.set_padre(self)
+            except AttributeError:
                 h.padre = self
 
     def get_hijos(self):
@@ -34,17 +38,16 @@ class nodo:
         return self.costo
     
     def igual(self, nodo):
-        if self.get_datos() == nodo.get_datos:
-            return True
-        else:
-            return False
+        return self.get_datos() == nodo.get_datos()
         
     def en_lista(self, lista_nodos):
-        en_la_lista = False
         for n in lista_nodos:
             if self.igual(n):
-                en_la_lista = True
-        return en_la_lista
+                return True
+        return False
     
     def __str__(self):
-        return str(self.get_datos)
+        return str(self.get_datos())
+
+# Alias lowercase por compatibilidad
+nodo = Nodo
